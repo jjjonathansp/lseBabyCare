@@ -45,6 +45,8 @@ dependencies {
     implementation(libs.navigation.ui)
     implementation(libs.lombok)
     annotationProcessor(libs.lombok)
+    implementation(libs.room.runtime)
+    annotationProcessor(libs.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

@@ -25,7 +25,10 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
+import androidx.room.Room;
 
+import com.example.lsbabycare.dao.UserDataDao;
+import com.example.lsbabycare.database.AppDatabase;
 import com.example.lsbabycare.models.UserData;
 import com.example.lsbabycare.ui.settings.SettingsFragment;
 import com.example.lsbabycare.ui.shared.SharedViewModel;
@@ -50,7 +53,8 @@ public class MainActivity extends AppCompatActivity {
     private DrawerLayout drawerLayout;
     private AppBarConfiguration mAppBarConfiguration;
     private SharedViewModel sharedViewModel;
-
+    private AppDatabase db;
+    private UserDataDao userDataDao;
 
 
     @Override
@@ -59,11 +63,26 @@ public class MainActivity extends AppCompatActivity {
         Log.i("MainActivity", "onCreate");
         setContentView(R.layout.activity_main);
         obtainUserData();
-
         configureNavBarAndToggle();
+        sharedViewModel = new ViewModelProvider(this).get(SharedViewModel.class);
+
+        db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "user-database").build();
+        userDataDao = db.userDataDao();
+        // Cargar los datos del usuario
+        new Thread(() -> {
+            UserData userData = userDataDao.getUserData();
+            if (userData != null) {
+                runOnUiThread(() -> {
+                    // Actualizar UI con los datos del usuario
+                    soundThreshold = userData.getRange();
+                    durationThreshold = userData.getSecsBeforeVibrate() * 1000;
+                    sharedViewModel.setUserData(userData);
+                });
+            }
+        }).start();
 
         //Para compartir el estado entre vistas.
-        sharedViewModel = new ViewModelProvider(this).get(SharedViewModel.class);
+
         sharedViewModel.getUserData().observe(this, userData -> {
             if (userData != null) {
                 soundThreshold = userData.getRange();
@@ -97,6 +116,10 @@ public class MainActivity extends AppCompatActivity {
                 restartMonitoring();
             }
         }
+    }
+
+    public UserDataDao getUserDataDao() {
+        return userDataDao;
     }
 
     private void openSettings() {

@@ -21,6 +21,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import com.example.lsbabycare.MainActivity;
+import com.example.lsbabycare.dao.UserDataDao;
 import com.example.lsbabycare.databinding.FragmentSettingsBinding;
 import com.example.lsbabycare.models.UserData;
 import com.example.lsbabycare.ui.shared.SharedViewModel;
@@ -31,11 +32,13 @@ public class SettingsFragment extends Fragment {
 
     private FragmentSettingsBinding binding;
 
+    private UserDataDao userDataDao;
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         SettingsViewModel settingsViewModel =
                 new ViewModelProvider(this).get(SettingsViewModel.class);
-
+        userDataDao = ((MainActivity) requireActivity()).getUserDataDao();
         sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
 
         binding = FragmentSettingsBinding.inflate(inflater, container, false);
@@ -43,6 +46,16 @@ public class SettingsFragment extends Fragment {
 
         final SeekBar soundRangeBar = binding.soundRangeBar;
         final TextView soundRangeValue = binding.soundRangeValue;
+        if(sharedViewModel.getUserData()!=null && sharedViewModel.getUserData().getValue()!=null) {
+            if(sharedViewModel.getUserData().getValue().getRange()>0) {
+                soundRangeBar.setProgress(sharedViewModel.getUserData().getValue().getRange());
+            }
+            if (sharedViewModel.getUserData().getValue().getSecsBeforeVibrate()>0) {
+                EditText secsNumberField = binding.secsNumberField;
+                secsNumberField.setText(String.valueOf(sharedViewModel.getUserData().getValue().getSecsBeforeVibrate()));
+                binding.soundRangeValue.setText(String.valueOf(sharedViewModel.getUserData().getValue().getRange()));
+            }
+        }
         soundRangeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -111,13 +124,24 @@ public class SettingsFragment extends Fragment {
         UserData userData = new UserData();
         userData.setRange(secsRangeBar.getProgress());
         userData.setSecsBeforeVibrate(Integer.parseInt(secsBeforeVibrateTxt.getText().toString()));
-
+        saveUserData(userData);
         sharedViewModel.setUserData(userData);
 
 
         // Redirigir a MonitorFragment
         NavController navController = Navigation.findNavController(view);
         navController.navigate(R.id.nav_monitor);
+    }
+
+    private void saveUserData(UserData userData) {
+        new Thread(() -> {
+            try{
+                userDataDao.insert(userData);
+            } catch (Exception e) {
+                userDataDao.update(userData);
+            }
+
+        }).start();
     }
 
     @Override
